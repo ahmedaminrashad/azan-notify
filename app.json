@@ -40,9 +40,9 @@
         "expo-notifications",
         {
           "color": "#071810",
-          "defaultChannel": "azan-takbir-channel",
+          "defaultChannel": "azan-user-sound-channel",
           "sounds": [
-            "./assets/sounds/allahuakbar.wav"
+            "./assets/sounds/azansound.wav"
           ]
         }
       ],

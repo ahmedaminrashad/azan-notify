@@ -10,7 +10,7 @@ export async function playTakbir(): Promise<void> {
   });
 
   if (!player) {
-    player = createAudioPlayer(require('../../assets/sounds/allahuakbar.wav'));
+    player = createAudioPlayer(require('../../assets/sounds/azansound.wav'));
   }
 
   await player.seekTo(0);
