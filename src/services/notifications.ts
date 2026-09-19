@@ -29,7 +29,6 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#D4AF37',
-      sound: 'default',
       enableVibrate: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
@@ -90,7 +89,6 @@ export async function scheduleAzanNotifications(settings: AppSettings): Promise<
         content: {
           title: `${meta.label} Azan`,
           body: `It is time for ${meta.label} (${meta.arabic}).`,
-          sound: true,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -115,7 +113,6 @@ export async function sendTestNotification(): Promise<void> {
     content: {
       title: 'Azan test',
       body: 'Notifications are working. You will hear Azan alerts at prayer time.',
-      sound: true,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
