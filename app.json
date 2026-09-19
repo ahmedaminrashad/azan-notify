@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["fetch"]
+        "UIBackgroundModes": [
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -38,7 +40,10 @@
         "expo-notifications",
         {
           "color": "#071810",
-          "defaultChannel": "azan-prayer-channel"
+          "defaultChannel": "azan-takbir-channel",
+          "sounds": [
+            "./assets/sounds/allahuakbar.wav"
+          ]
         }
       ],
       [
@@ -46,7 +51,8 @@
         {
           "locationWhenInUsePermission": "Azan Notify uses your location to calculate accurate prayer times for Azan alerts."
         }
-      ]
+      ],
+      "expo-audio"
     ]
   }
 }

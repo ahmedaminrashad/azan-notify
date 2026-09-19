@@ -1,8 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { AZAN_CHANNEL_ID, PRAYER_META, SCHEDULE_DAYS } from '../constants';
+import { AZAN_CHANNEL_ID, AZAN_SOUND, PRAYER_META, SCHEDULE_DAYS } from '../constants';
 import type { AppSettings, NotifiablePrayer } from '../types';
 import { getPrayerTimesForDate } from './prayerTimes';
+import { playTakbir } from './takbirSound';
 import type { PrayerTimes } from 'adhan';
 
 function timeForNotifiablePrayer(times: PrayerTimes, prayer: NotifiablePrayer): Date {
@@ -29,6 +30,7 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#D4AF37',
+      sound: AZAN_SOUND,
       enableVibrate: true,
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
@@ -89,6 +91,7 @@ export async function scheduleAzanNotifications(settings: AppSettings): Promise<
         content: {
           title: `${meta.label} Azan`,
           body: `It is time for ${meta.label} (${meta.arabic}).`,
+          sound: AZAN_SOUND,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -109,14 +112,17 @@ export async function sendTestNotification(): Promise<void> {
     throw new Error('Notification permission was not granted.');
   }
 
+  await playTakbir();
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: 'Azan test',
-      body: 'Notifications are working. You will hear Azan alerts at prayer time.',
+      body: 'الله أكبر',
+      sound: AZAN_SOUND,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 3,
+      seconds: 1,
       channelId: AZAN_CHANNEL_ID,
     },
   });

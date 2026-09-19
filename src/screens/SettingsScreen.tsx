@@ -149,7 +149,7 @@ export function SettingsScreen({ settings, onChange, scheduledCount, onClose }: 
           });
         }}
       >
-        <Text style={styles.buttonText}>Send a test notification</Text>
+        <Text style={styles.buttonText}>Play test: الله أكبر</Text>
       </Pressable>
     </ScrollView>
   );

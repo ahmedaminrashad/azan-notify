@@ -1,18 +1,18 @@
-name: Build Android APK
+name: Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
-    tags: ['v*']
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
 
 jobs:
   apk:
-    name: Generate APK
+    name: Build release APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
-    env:
-      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,14 +20,22 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: npm
 
-      - name: Setup Java
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --non-interactive --no-install
+        env:
+          CI: "1"
+
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
           cache: gradle
 
       - name: Setup Android SDK
@@ -35,34 +43,36 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install JavaScript dependencies
-        run: npm ci
+      - name: Unset machine-specific Java home
+        run: sed -i '/^org.gradle.java.home=/d' android/gradle.properties
 
-      - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive --no-install
+      - name: Ensure debug keystore
+        run: |
+          if [ ! -f android/app/debug.keystore ]; then
+            keytool -genkeypair \
+              -keystore android/app/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
 
       - name: Build release APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon
-
-      - name: Collect APK
-        run: |
-          mkdir -p dist
-          apk="$(find android/app/build/outputs/apk -name '*.apk' | head -n 1)"
-          if [ -z "$apk" ]; then
-            echo "No APK was produced."
-            exit 1
-          fi
-          cp "$apk" dist/azan-notify.apk
-          echo "Built $apk"
-          ls -lh dist
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=armeabi-v7a,arm64-v8a
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: azan-notify-apk
-          path: dist/*.apk
+          name: azan-notify-release
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
