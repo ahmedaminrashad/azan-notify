@@ -15,7 +15,6 @@ function timeForNotifiablePrayer(times: PrayerTimes, prayer: NotifiablePrayer): 
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
@@ -91,7 +90,7 @@ export async function scheduleAzanNotifications(settings: AppSettings): Promise<
         content: {
           title: `${meta.label} Azan`,
           body: `It is time for ${meta.label} (${meta.arabic}).`,
-          sound: 'default',
+          sound: true,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -116,7 +115,7 @@ export async function sendTestNotification(): Promise<void> {
     content: {
       title: 'Azan test',
       body: 'Notifications are working. You will hear Azan alerts at prayer time.',
-      sound: 'default',
+      sound: true,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
