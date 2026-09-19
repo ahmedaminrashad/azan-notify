@@ -1,0 +1,65 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+
+jobs:
+  apk:
+    name: Generate APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --non-interactive --no-install
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          apk="$(find android/app/build/outputs/apk -name '*.apk' | head -n 1)"
+          if [ -z "$apk" ]; then
+            echo "No APK was produced."
+            exit 1
+          fi
+          cp "$apk" dist/azan-notify.apk
+          echo "Built $apk"
+          ls -lh dist
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: azan-notify-apk
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 14
