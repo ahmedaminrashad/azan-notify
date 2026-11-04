@@ -77,6 +77,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export const SETTINGS_KEY = 'azan-notify-settings-v1';
-export const AZAN_CHANNEL_ID = 'azan-user-sound-channel';
-export const AZAN_SOUND = 'azansound.wav';
+export const AZAN_CHANNEL_ID = 'azan-alarm-v3';
+export const AZAN_SOUND_IOS = 'azansound.wav';
+export const AZAN_SOUND_ANDROID = 'azansound.ogg';
+export const STALE_CHANNEL_IDS = [
+  'azan-prayer-channel',
+  'azan-takbir-channel',
+  'azan-user-sound-channel',
+];
 export const SCHEDULE_DAYS = 7;

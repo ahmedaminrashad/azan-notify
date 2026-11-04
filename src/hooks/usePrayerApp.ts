@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppSettings, PrayerEntry } from '../types';
 import { loadSettings, saveSettings } from '../services/settings';
 import { getNextPrayer, getPrayerEntries } from '../services/prayerTimes';
-import { scheduleAzanNotifications } from '../services/notifications';
+import { listenForAzanAlerts, scheduleAzanNotifications } from '../services/notifications';
 
 export function usePrayerApp() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -43,6 +43,8 @@ export function usePrayerApp() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => listenForAzanAlerts(), []);
 
   const updateSettings = useCallback(async (next: AppSettings) => {
     setSettings(next);

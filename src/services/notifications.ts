@@ -1,10 +1,19 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
-import { AZAN_CHANNEL_ID, AZAN_SOUND, PRAYER_META, SCHEDULE_DAYS } from '../constants';
+import { Linking, Platform } from 'react-native';
+import {
+  AZAN_CHANNEL_ID,
+  AZAN_SOUND_ANDROID,
+  AZAN_SOUND_IOS,
+  PRAYER_META,
+  SCHEDULE_DAYS,
+  STALE_CHANNEL_IDS,
+} from '../constants';
 import type { AppSettings, NotifiablePrayer } from '../types';
 import { getPrayerTimesForDate } from './prayerTimes';
 import { playTakbir } from './takbirSound';
 import type { PrayerTimes } from 'adhan';
+
+const AZAN_SOUND = Platform.OS === 'android' ? AZAN_SOUND_ANDROID : AZAN_SOUND_IOS;
 
 function timeForNotifiablePrayer(times: PrayerTimes, prayer: NotifiablePrayer): Date {
   if (prayer === 'fajr') return times.fajr;
@@ -23,18 +32,44 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function ensureNotificationPermissions(): Promise<boolean> {
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(AZAN_CHANNEL_ID, {
-      name: 'Azan',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#D4AF37',
-      sound: AZAN_SOUND,
-      enableVibrate: true,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
+async function recreateAzanChannel(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    return;
   }
+
+  for (const channelId of [...STALE_CHANNEL_IDS, AZAN_CHANNEL_ID]) {
+    try {
+      await Notifications.deleteNotificationChannelAsync(channelId);
+    } catch {
+      // Channel may not exist yet.
+    }
+  }
+
+  await Notifications.setNotificationChannelAsync(AZAN_CHANNEL_ID, {
+    name: 'Azan alarm',
+    description: 'Prayer-time Azan with sound',
+    importance: Notifications.AndroidImportance.MAX,
+    bypassDnd: true,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: '#D4AF37',
+    sound: AZAN_SOUND,
+    enableVibrate: true,
+    enableLights: true,
+    showBadge: true,
+    lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    audioAttributes: {
+      usage: Notifications.AndroidAudioUsage.ALARM,
+      contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      flags: {
+        enforceAudibility: true,
+        requestHardwareAudioVideoSynchronization: false,
+      },
+    },
+  });
+}
+
+export async function ensureNotificationPermissions(): Promise<boolean> {
+  await recreateAzanChannel();
 
   const current = await Notifications.getPermissionsAsync();
   if (current.status === 'granted' || current.granted) {
@@ -50,6 +85,31 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
   });
 
   return requested.status === 'granted' || requested.granted;
+}
+
+export async function restoreAzanSound(): Promise<string> {
+  const allowed = await ensureNotificationPermissions();
+  if (!allowed) {
+    throw new Error('Notification permission was not granted.');
+  }
+
+  if (Platform.OS === 'android') {
+    try {
+      await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM');
+    } catch {
+      await Linking.openSettings();
+    }
+  }
+
+  await playTakbir();
+  return 'Azan sound restored. Turn on Alarms & reminders, set this category to Sound, and raise alarm volume.';
+}
+
+export function listenForAzanAlerts(): () => void {
+  const subscription = Notifications.addNotificationReceivedListener(() => {
+    void playTakbir();
+  });
+  return () => subscription.remove();
 }
 
 export async function cancelAzanNotifications(): Promise<void> {
@@ -92,6 +152,7 @@ export async function scheduleAzanNotifications(settings: AppSettings): Promise<
           title: `${meta.label} Azan`,
           body: `It is time for ${meta.label} (${meta.arabic}).`,
           sound: AZAN_SOUND,
+          priority: Notifications.AndroidNotificationPriority.MAX,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -119,6 +180,7 @@ export async function sendTestNotification(): Promise<void> {
       title: 'Azan test',
       body: 'الله أكبر',
       sound: AZAN_SOUND,
+      priority: Notifications.AndroidNotificationPriority.MAX,
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

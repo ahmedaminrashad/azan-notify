@@ -2,7 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { useState } from 'react';
 import { CALCULATION_METHODS, CITY_PRESETS, NOTIFIABLE_PRAYERS, PRAYER_META } from '../constants';
 import { requestAndReadGps } from '../services/location';
-import { sendTestNotification } from '../services/notifications';
+import { restoreAzanSound, sendTestNotification } from '../services/notifications';
 import { colors, radius, spacing } from '../theme';
 import type { AppSettings, CalculationMethodKey, MadhabKey, NotifiablePrayer } from '../types';
 
@@ -140,6 +140,19 @@ export function SettingsScreen({ settings, onChange, scheduledCount, onClose }: 
           />
         </View>
       ))}
+
+      <Pressable
+        style={styles.button}
+        onPress={() => {
+          void restoreAzanSound()
+            .then((hint) => setMessage(hint))
+            .catch((err) => {
+              setMessage(err instanceof Error ? err.message : 'Could not restore Azan sound.');
+            });
+        }}
+      >
+        <Text style={styles.buttonText}>Restore Azan sound</Text>
+      </Pressable>
 
       <Pressable
         style={styles.button}
