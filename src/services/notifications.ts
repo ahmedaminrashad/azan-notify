@@ -191,6 +191,8 @@ export async function sendTestNotification(): Promise<void> {
     throw new Error('Notification permission was not granted.');
   }
 
+  await playTakbir();
+
   await Notifications.scheduleNotificationAsync({
     identifier: 'azan-test',
     content: {
