@@ -32,6 +32,28 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function prayerDayKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function azanIdentifier(prayer: NotifiablePrayer, date: Date): string {
+  return `azan-${prayer}-${prayerDayKey(date)}`;
+}
+
+let scheduleQueue: Promise<unknown> = Promise.resolve();
+
+function enqueueSchedule<T>(work: () => Promise<T>): Promise<T> {
+  const run = scheduleQueue.then(work, work);
+  scheduleQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
 async function recreateAzanChannel(): Promise<void> {
   if (Platform.OS !== 'android') {
     return;
@@ -105,66 +127,62 @@ export async function restoreAzanSound(): Promise<string> {
   return 'Azan sound restored. Turn on Alarms & reminders, set this category to Sound, and raise alarm volume.';
 }
 
-export function listenForAzanAlerts(): () => void {
-  const subscription = Notifications.addNotificationReceivedListener(() => {
-    void playTakbir();
-  });
-  return () => subscription.remove();
-}
-
 export async function cancelAzanNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
 export async function scheduleAzanNotifications(settings: AppSettings): Promise<number> {
-  await cancelAzanNotifications();
+  return enqueueSchedule(async () => {
+    await cancelAzanNotifications();
 
-  if (!settings.notificationsEnabled) {
-    return 0;
-  }
-
-  const allowed = await ensureNotificationPermissions();
-  if (!allowed) {
-    return 0;
-  }
-
-  const now = Date.now();
-  let scheduled = 0;
-
-  for (let dayOffset = 0; dayOffset < SCHEDULE_DAYS; dayOffset += 1) {
-    const date = new Date();
-    date.setDate(date.getDate() + dayOffset);
-    const times = getPrayerTimesForDate(date, settings);
-
-    for (const prayer of Object.keys(settings.enabledPrayers) as NotifiablePrayer[]) {
-      if (!settings.enabledPrayers[prayer]) {
-        continue;
-      }
-
-      const prayerTime = timeForNotifiablePrayer(times, prayer);
-      if (prayerTime.getTime() <= now + 15_000) {
-        continue;
-      }
-
-      const meta = PRAYER_META[prayer];
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `${meta.label} Azan`,
-          body: `It is time for ${meta.label} (${meta.arabic}).`,
-          sound: AZAN_SOUND,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: prayerTime,
-          channelId: AZAN_CHANNEL_ID,
-        },
-      });
-      scheduled += 1;
+    if (!settings.notificationsEnabled) {
+      return 0;
     }
-  }
 
-  return scheduled;
+    const allowed = await ensureNotificationPermissions();
+    if (!allowed) {
+      return 0;
+    }
+
+    const now = Date.now();
+    let scheduled = 0;
+
+    for (let dayOffset = 0; dayOffset < SCHEDULE_DAYS; dayOffset += 1) {
+      const date = new Date();
+      date.setDate(date.getDate() + dayOffset);
+      const times = getPrayerTimesForDate(date, settings);
+
+      for (const prayer of Object.keys(settings.enabledPrayers) as NotifiablePrayer[]) {
+        if (!settings.enabledPrayers[prayer]) {
+          continue;
+        }
+
+        const prayerTime = timeForNotifiablePrayer(times, prayer);
+        if (prayerTime.getTime() <= now + 15_000) {
+          continue;
+        }
+
+        const meta = PRAYER_META[prayer];
+        await Notifications.scheduleNotificationAsync({
+          identifier: azanIdentifier(prayer, prayerTime),
+          content: {
+            title: `${meta.label} Azan`,
+            body: `It is time for ${meta.label} (${meta.arabic}).`,
+            sound: AZAN_SOUND,
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: prayerTime,
+            channelId: AZAN_CHANNEL_ID,
+          },
+        });
+        scheduled += 1;
+      }
+    }
+
+    return scheduled;
+  });
 }
 
 export async function sendTestNotification(): Promise<void> {
@@ -173,9 +191,8 @@ export async function sendTestNotification(): Promise<void> {
     throw new Error('Notification permission was not granted.');
   }
 
-  await playTakbir();
-
   await Notifications.scheduleNotificationAsync({
+    identifier: 'azan-test',
     content: {
       title: 'Azan test',
       body: 'الله أكبر',
