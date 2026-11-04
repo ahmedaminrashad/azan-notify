@@ -45,7 +45,6 @@
           "color": "#071810",
           "defaultChannel": "azan-alarm-v3",
           "sounds": [
-            "./assets/sounds/azansound.wav",
             "./assets/sounds/azansound.ogg"
           ]
         }
