@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.azannotify.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#071810",
         "foregroundImage": "./assets/icon.png"
@@ -30,9 +30,11 @@
         "VIBRATE",
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM",
-        "USE_EXACT_ALARM",
         "WAKE_LOCK",
         "ACCESS_NOTIFICATION_POLICY"
+      ],
+      "blockedPermissions": [
+        "android.permission.USE_EXACT_ALARM"
       ]
     },
     "web": {
